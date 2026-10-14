@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Стереометрия: сечения многогранников</title>
+<style>
+  :root { --bg:#121212; --fg:#e8e8ec; --mut:#9a9aa6; --line:rgba(255,255,255,.12); --acc:#2dd4bf; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden;
+    font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  canvas#c { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:crosshair; }
+  #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:5; }
+  .lb { position:absolute; transform:translate(-50%,-50%); font-weight:700; font-size:16px; color:#fff;
+    text-shadow:0 0 4px #000,0 0 8px #000; white-space:nowrap; }
+  .lb sub { font-size:.65em; }
+  .lb.p { font-size:20px; }
+  .lb.q { font-size:15px; color:#ffd54f; }
+  .lb.aux { font-size:14px; color:#808080 !important; }
+
+  #startMenu { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    background:rgba(12,12,16,.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); padding:20px; }
+  .menu-box { width:100%; max-width:640px; background:rgba(24,24,30,.92); border:1px solid var(--line);
+    border-radius:20px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,.65); text-align:center; }
+  .menu-box h1 { margin:0 0 8px; font-size:24px; color:#fff; }
+  .menu-box p { margin:0 0 22px; color:var(--mut); font-size:14px; }
+  .menu-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .fig-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    padding:18px 12px; background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:14px;
+    cursor:pointer; transition:transform .18s, background .18s, border-color .18s; }
+  .fig-card:hover { transform:translateY(-3px); background:rgba(45,212,191,.12); border-color:var(--acc); }
+  .fig-card svg { width:68px; height:68px; stroke:var(--acc); stroke-width:2; fill:rgba(45,212,191,.1); stroke-linejoin:round; }
+  .fig-card span { font-weight:600; font-size:15px; color:var(--fg); }
+
+  #panel { position:fixed; top:16px; left:16px; width:345px; max-height:calc(100% - 32px); display:flex; flex-direction:column;
+    z-index:10; background:rgba(24,24,28,.68); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.45); }
+  #head { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; gap:6px; font-weight:600; cursor:pointer; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+  #head span { color:var(--mut); transition:transform .2s; }
+  #panel.closed #head span { transform:rotate(180deg); }
+  #panel.closed #body { display:none; }
+  #body { overflow-y:auto; padding:0 14px 6px; }
+  #info { padding:10px 14px 12px; border-top:1px solid var(--line); color:var(--acc); font-weight:600; line-height:1.45; }
+  #info small { display:block; color:var(--mut); font-weight:400; font-size:12px; margin-top:4px; }
+
+  .seg { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:10px; }
+  button, select { font:inherit; color:var(--fg); background:rgba(255,255,255,.07); border:1px solid var(--line);
+    border-radius:8px; padding:7px 10px; cursor:pointer; }
+  select { width:100%; margin-top:6px; }
+  select option { background:#1c1c20; }
+  button:hover { background:rgba(255,255,255,.14); }
+  button:disabled { opacity:.4; cursor:default; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--acc); outline-offset:1px; }
+  .seg button.on, button.on { background:var(--acc); color:#06201c; border-color:var(--acc); font-weight:600; }
+
+  .ray-bar { background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:10px; }
+  .ray-bar-title { font-size:12px; color:var(--mut); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+  .ray-btns { display:flex; gap:6px; }
+  .ray-btns button { flex:1; font-weight:700; padding:6px 4px; border-width:2px; }
+  .ray-btns button.active-pt { background:rgba(255,255,255,.16); border-color:var(--c); color:var(--c); box-shadow:0 0 10px rgba(255,255,255,.12); }
+
+  .pt { border-left:3px solid var(--c); padding:4px 0 8px 10px; margin-bottom:8px; background:rgba(255,255,255,.02); border-radius:0 8px 8px 0; }
+  .pt.active-card { background:rgba(255,255,255,.06); }
+  .pt h4 { margin:2px 0; font-size:14px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding-right:6px; }
+  .pt-left { display:flex; align-items:center; gap:8px; }
+  .nm { width:42px; text-align:center; font:700 15px system-ui,sans-serif; color:var(--c); background:rgba(255,255,255,.07);
+    border:1px solid var(--line); border-radius:8px; padding:3px; text-transform:uppercase; }
+  .pick-btn { font-size:11.5px; padding:4px 8px; border-radius:6px; }
+  .pick-btn.on { background:var(--c); color:#000; border-color:var(--c); font-weight:700; }
+  .pos-tag { font-size:11.5px; color:var(--mut); margin-top:4px; }
+
+  .hr { display:flex; align-items:center; gap:6px; }
+  #cam, #snap, #openMenuBtn { padding:4px 7px; font-size:12px; min-height:32px; white-space:nowrap; }
+  #head > div:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #credit { padding:0 14px 10px; text-align:center; font-size:11px; opacity:.4; color:var(--mut); }
+  #toast { position:fixed; top:18px; left:50%; transform:translate(-50%,-20px); z-index:120; max-width:90%; text-align:center;
+    background:rgba(24,24,28,.95); border:1px solid var(--line); padding:10px 16px; border-radius:12px;
+    opacity:0; transition:opacity .3s, transform .3s; pointer-events:none; }
+  #toast.on { opacity:1; transform:translate(-50%,0); }
+  .cl { display:block; color:var(--mut); margin:4px 0 8px; }
+  .sl { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .sl input { flex:1; accent-color:var(--c); } .sl output { width:36px; text-align:right; color:var(--mut); }
+  .fr { display:flex; gap:5px; margin-top:6px; } .fr button { flex:1; padding:5px 0; }
+  .act { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 8px; } .act button { flex:1 1 40%; padding:10px; font-weight:600; }
+  .tool-row { display:flex; gap:6px; margin-bottom:8px; }
+  .tool-row button { flex:1; font-size:12.5px; padding:7px 8px; }
+  #build { background:#ff9800; border-color:#ff9800; color:#1d1200; } #build:hover { background:#ffb03a; }
+  #steps { background:var(--acc); border-color:var(--acc); color:#06201c; } #steps:hover { background:#5eead4; }
+
+  @media (max-width:768px) {
+    #panel { top:auto; left:0; right:0; bottom:0; width:auto; max-height:58%; border-radius:18px 18px 0 0; }
+    .menu-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
+    .menu-box { padding:18px; }
+    button, select { min-height:42px; font-size:15px; }
+    .fr button { min-height:38px; } .nm { font-size:16px; } .sl input { height:28px; }
+  }
+</style>
+</head>
+<body>
+<div id="startMenu">
+  <div class="menu-box">
+    <h1>Сечения многогранников</h1>
+    <p>Выберите фигуру для построения сечения методом следов</p>
+    <div class="menu-grid">
+      <button class="fig-card" data-start="cube">
+        <svg viewBox="0 0 64 64">
+          <polygon points="16,22 40,22 40,48 16,48"/>
+          <polygon points="24,14 48,14 48,40 24,40"/>
+          <line x1="16" y1="22" x2="24" y2="14"/><line x1="40" y1="22" x2="48" y2="14"/>
+          <line x1="40" y1="48" x2="48" y2="40"/><line x1="16" y1="48" x2="24" y2="40"/>
+        </svg>
+        <span>Куб</span>
+      </button>
+      <button class="fig-card" data-start="tetra">
+        <svg viewBox="0 0 64 64">
+          <polygon points="32,12 12,48 52,44"/>
+          <line x1="32" y1="12" x2="36" y2="34"/>
+          <line x1="12" y1="48" x2="36" y2="34"/>
+          <line x1="52" y1="44" x2="36" y2="34"/>
+        </svg>
+        <span>Тетраэдр</span>
+      </button>
+      <button class="fig-card" data-start="pyr">
+        <svg viewBox="0 0 64 64">
+          <polygon points="12,48 38,48 52,36 26,36"/>
+          <line x1="32" y1="12" x2="12" y2="48"/><line x1="32" y1="12" x2="38" y2="48"/>
+          <line x1="32" y1="12" x2="52" y2="36"/><line x1="32" y1="12" x2="26" y2="36"/>
+        </svg>
+        <span>Правильная пирамида</span>
+      </button>
+      <button class="fig-card" data-start="prism">
+        <svg viewBox="0 0 64 64">
+          <polygon points="14,22 48,22 34,12"/>
+          <polygon points="14,50 48,50 34,40"/>
+          <line x1="14" y1="22" x2="14" y2="50"/><line x1="48" y1="22" x2="48" y2="50"/>
+          <line x1="34" y1="12" x2="34" y2="40"/>
+        </svg>
+        <span>Треугольная призма</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+<div id="labels"></div>
+
+<div id="panel">
+  <div id="head">
+    <div>Сечение многогранника</div>
+    <div class="hr">
+      <button id="openMenuBtn" title="Открыть меню выбора фигуры"> Фигуры</button>
+      <button id="cam" title="Вернуть камеру в исходное положение">⌖ Центр</button>
+      <button id="snap" title="Сохранить PNG">📷</button>
+      <span>▾</span>
+    </div>
+  </div>
+  <div id="body">
+    <div class="seg" id="figs">
+      <button data-f="cube" class="on">Куб</button>
+      <button data-f="tetra">Тетраэдр</button>
+      <button data-f="pyr">Правильная пирамида</button>
+      <button data-f="prism">Треугольная призма</button>
+    </div>
+    <div class="tool-row">
+      <button id="mirrorBtn" title="Зеркально отразить фигуру и вершины">⇄ Отразить фигуру</button>
+    </div>
+    <label class="cl">Готовые задачи
+      <select id="preset">
+        <option value="custom">Свой выбор</option>
+        <option value="hex">Правильный шестиугольник в кубе</option>
+        <option value="trap">Равнобедренная трапеция в кубе</option>
+        <option value="tri">Правильный треугольник в кубе</option>
+        <option value="tetra">Сечение тетраэдра</option>
+        <option value="pyr">Сечение четырехугольной пирамиды</option>
+        <option value="prism">Сечение треугольной призмы</option>
+      </select>
+    </label>
+    <div class="ray-bar">
+      <div class="ray-bar-title">
+        <span>Клик по грани ставит точку:</span>
+        <small>Raycaster 3D</small>
+      </div>
+      <div class="ray-btns" id="rayBtns"></div>
+    </div>
+    <div id="pts"></div>
+    <label class="cl">Цвет сечения
+      <select id="color">
+        <option value="#ff9800">Оранжевый</option>
+        <option value="#1de9d6">Бирюзовый</option>
+        <option value="#b44cff">Неоновый фиолетовый</option>
+        <option value="#2ecc71">Изумрудный</option>
+        <option value="#ffeb3b">Жёлтый</option>
+      </select>
+    </label>
+    <div class="act">
+      <button id="build">Построить сразу</button>
+      <button id="steps">Построить по шагам</button>
+      <button id="prev">Предыдущий шаг</button>
+      <button id="next">Следующий шаг</button>
+      <button id="auto">▶ Авто</button>
+      <button id="reset">Сбросить сечение</button>
+    </div>
+  </div>
+  <div id="info">Кликните по любой грани фигуры, чтобы поставить точку, затем нажмите «Построить сразу» или «Построить по шагам».</div>
+  <div id="credit">Разработано @IL33MA • Проект по стереометрии</div>
+</div>
+<div id="toast"></div>
+
+<script src="three.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'"></script>
+<script src="OrbitControls.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'"></script>
+<script>
+function makeCube() {
+  const names = ['A','B','C','D','A1','B1','C1','D1'];
+  const verts = [[-1,-1,1],[1,-1,1],[1,-1,-1],[-1,-1,-1],[-1,1,1],[1,1,1],[1,1,-1],[-1,1,-1]]
+    .map(a => new THREE.Vector3(...a));
+  const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  const faces = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+  const def = [{m:'e',e:'A–B',t:.5},{m:'e',e:'C–C1',t:.5},{m:'e',e:'D1–A1',t:.5}];
+  return { type:'cube', names, verts, edges, faces, def, a: 2 };
+}
+
+function makeTetra() {
+  const a = 2.6, R = a / Math.sqrt(3), h = a * Math.sqrt(2 / 3);
+  const base = [0, 1, 2].map(i => new THREE.Vector3(R*Math.cos(i*2*Math.PI/3), -h/4, R*Math.sin(i*2*Math.PI/3)));
+  const verts = [...base, new THREE.Vector3(0, 3*h/4, 0)];
+  const edges = [[0,1],[1,2],[2,0],[0,3],[1,3],[2,3]];
+  const faces = [[0,1,2],[0,1,3],[1,2,3],[2,0,3]];
+  const def = [{m:'e',e:'A–B',t:.5},{m:'e',e:'B–C',t:.5},{m:'e',e:'C–D',t:.5}];
+  return { type:'tetra', names:['A','B','C','D'], verts, edges, faces, def, a };
+}
+
+function makePyramid() {
+  const names = ['A','B','C','D','S'];
+  const s = 1.2, h = 1.3;
+  const verts = [
+    new THREE.Vector3(-s, -1, s),
+    new THREE.Vector3(s, -1, s),
+    new THREE.Vector3(s, -1, -s),
+    new THREE.Vector3(-s, -1, -s),
+    new THREE.Vector3(0, h, 0)
+  ];
+  const edges = [[0,1],[1,2],[2,3],[3,0],[0,4],[1,4],[2,4],[3,4]];
+  const faces = [[0,1,2,3],[0,1,4],[1,2,4],[2,3,4],[3,0,4]];
+  const def = [{m:'e',e:'A–S',t:.45},{m:'e',e:'B–S',t:.65},{m:'e',e:'C–D',t:.5}];
+  return { type:'pyr', names, verts, edges, faces, def, a: 2.4 };
+}
+
+function makePrism() {
+  const names = ['A','B','C','A1','B1','C1'];
+  const a = 2.4, R = a / Math.sqrt(3), y0 = -1.05, y1 = 1.05;
+  const angs = [5*Math.PI/6, Math.PI/6, -Math.PI/2];
+  const bot = angs.map(al => new THREE.Vector3(R*Math.cos(al), y0, R*Math.sin(al)));
+  const top = angs.map(al => new THREE.Vector3(R*Math.cos(al), y1, R*Math.sin(al)));
+  const verts = [...bot, ...top];
+  const edges = [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]];
+  const faces = [[0,1,2],[3,4,5],[0,1,4,3],[1,2,5,4],[2,0,3,5]];
+  const def = [{m:'e',e:'A–B',t:.5},{m:'e',e:'B–B1',t:.5},{m:'e',e:'C–C1',t:.65}];
+  return { type:'prism', names, verts, edges, faces, def, a };
+}
+
+const canvas = document.getElementById('c'), panel = document.getElementById('panel');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x121212);
+const scene = new THREE.Scene();
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(4.2, 3.4, 5.2);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.minDistance = 3.2; controls.maxDistance = 12;
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(4, 8, 5); scene.add(sun);
+
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  const off = w <= 768 ? Math.round(panel.offsetHeight / 2) : 0;
+  camera.setViewOffset(w, h, 0, off, w, h);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+new ResizeObserver(resize).observe(panel);
+window.addEventListener('load', resize);
+
+const COL = ['#ff2bd6', '#39ff14', '#00e5ff'], LAB = ['M', 'N', 'K'];
+const FR = [['1/4', .25], ['1/3', 1/3], ['1/2', .5], ['2/3', 2/3]];
+const sub = s => String(s).replace(/(\d+)/g, '<sub>$1</sub>');
+const ruN = { 3:'треугольник', 4:'четырёхугольник', 5:'пятиугольник', 6:'шестиугольник' };
+
+let fig, figGroup, figMesh = null, secGroup = null, pts = [], vLabels = [], pLabels = [], markers = [], grid = null;
+let secLabels = [], step = null, anim = null, auto = false, autoTimer = 0;
+let activePt = 0, isMirrored = false;
+
+const labelsBox = document.getElementById('labels');
+const ptsBox = document.getElementById('pts'), info = document.getElementById('info'), presetSel = document.getElementById('preset');
+const rayBtnsBox = document.getElementById('rayBtns');
+const startMenu = document.getElementById('startMenu');
+
+const hoverSphere = new THREE.Mesh(
+  new THREE.SphereGeometry(0.065, 16, 12),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthTest: false })
+);
+hoverSphere.visible = false;
+hoverSphere.renderOrder = 12;
+worldGroup.add(hoverSphere);
+
+function addLabel(html, cls) {
+  const el = document.createElement('div'); el.className = 'lb ' + (cls || ''); el.innerHTML = html;
+  labelsBox.appendChild(el); return el;
+}
+function disposeGroup(g) {
+  worldGroup.remove(g);
+  g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+}
+
+function makeFigByType(type) {
+  if (type === 'tetra') return makeTetra();
+  if (type === 'pyr') return makePyramid();
+  if (type === 'prism') return makePrism();
+  return makeCube();
+}
+
+function setFigure(type) {
+  fig = makeFigByType(type);
+  document.querySelectorAll('#figs button').forEach(x => x.classList.toggle('on', x.dataset.f === fig.type));
+  if (figGroup) disposeGroup(figGroup);
+  if (grid) worldGroup.remove(grid);
+  clearSection();
+  vLabels.forEach(l => l.el.remove()); vLabels = [];
+
+  figGroup = new THREE.Group();
+  const pos = [], idx = [], triToFace = [];
+  fig.verts.forEach(v => pos.push(v.x, v.y, v.z));
+  fig.faces.forEach((f, fi) => {
+    for (let i = 1; i < f.length - 1; i++) {
+      idx.push(f[0], f[i], f[i+1]);
+      triToFace.push(fi);
+    }
+  });
+  fig.triToFace = triToFace;
+  fig.facePlanes = fig.faces.map(f => {
+    const v0 = fig.verts[f[0]];
+    const n = new THREE.Vector3().subVectors(fig.verts[f[1]], v0).cross(new THREE.Vector3().subVectors(fig.verts[f[2]], v0)).normalize();
+    return { f, v0, n, name: f.map(i => fig.names[i]).join('') };
+  });
+
+  const gF = new THREE.BufferGeometry();
+  gF.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); gF.setIndex(idx); gF.computeVertexNormals();
+  figMesh = new THREE.Mesh(gF, new THREE.MeshPhongMaterial({
+    color: 0x4aa3ff, transparent: true, opacity: .25, side: THREE.DoubleSide, depthWrite: false }));
+  figGroup.add(figMesh);
+
+  const ep = []; fig.edges.forEach(([a, b]) => ep.push(fig.verts[a], fig.verts[b]));
+  figGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ep), new THREE.LineBasicMaterial({ color: 0xffffff })));
+  worldGroup.add(figGroup);
+
+  const minY = Math.min(...fig.verts.map(v => v.y));
+  grid = new THREE.GridHelper(10, 10, 0x4a4a52, 0x2a2a30); grid.position.y = minY - 0.001; worldGroup.add(grid);
+
+  fig.verts.forEach((v, i) => vLabels.push({ el: addLabel(sub(fig.names[i])), pos: v.clone().multiplyScalar(1.15), vi: i, hiddenByPt: false }));
+
+  pts = fig.def.map((d, i) => {
+    const eIdx = Math.max(0, fig.edges.findIndex(([a, b]) => fig.names[a] + '–' + fig.names[b] === d.e));
+    const [a, b] = fig.edges[eIdx];
+    const pVec = fig.verts[a].clone().lerp(fig.verts[b], d.t);
+    return {
+      name: pts[i] ? pts[i].name : LAB[i],
+      m: d.m,
+      v: 0,
+      e: eIdx,
+      t: d.t,
+      pos: pVec,
+      faceIdx: 0
+    };
+  });
+  buildUI(); updateMarkers(); presetSel.value = 'custom';
+  info.textContent = 'Кликните по любой грани фигуры для установки точки или нажмите «Построить сразу».';
+}
+
+const vertexAt = P => fig.verts.findIndex(v => v.distanceTo(P) < 0.1);
+
+function pointPos(p) {
+  let raw;
+  if (p.m === 'v') raw = fig.verts[p.v].clone();
+  else if (p.m === 'e') {
+    const [a, b] = fig.edges[p.e], t = Math.min(1, Math.max(0, +p.t || 0));
+    raw = fig.verts[a].clone().lerp(fig.verts[b], t);
+  } else {
+    raw = (p.pos ? p.pos.clone() : fig.verts[0].clone());
+  }
+  const vi = vertexAt(raw);
+  if (vi >= 0) return fig.verts[vi].clone();
+  return raw;
+}
+
+const srcName = p => p.name;
+
+function describePointLocation(p) {
+  const P = pointPos(p);
+  const vi = vertexAt(P);
+  if (vi >= 0) return `Вершина ${fig.names[vi]} (слияние → ${p.name})`;
+  if (p.m === 'e') {
+    const [a, b] = fig.edges[p.e];
+    return `Ребро ${fig.names[a]}–${fig.names[b]} (t=${(+p.t).toFixed(2)})`;
+  }
+  if (p.m === 'f') {
+    const fp = fig.facePlanes[p.faceIdx || 0];
+    return `Грань ${fp ? fp.name : ''} (${P.x.toFixed(2)}, ${P.y.toFixed(2)}, ${P.z.toFixed(2)})`;
+  }
+  return `Точка (${P.x.toFixed(2)}, ${P.y.toFixed(2)}, ${P.z.toFixed(2)})`;
+}
+
+function renderRayBtns() {
+  rayBtnsBox.innerHTML = '';
+  pts.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.style.setProperty('--c', COL[i]);
+    b.className = i === activePt ? 'active-pt' : '';
+    b.textContent = `${i + 1}: ${p.name}`;
+    b.onclick = () => {
+      activePt = i;
+      renderRayBtns();
+      document.querySelectorAll('.pt').forEach((el, idx) => el.classList.toggle('active-card', idx === activePt));
+      document.querySelectorAll('.pick-btn').forEach((el, idx) => el.classList.toggle('on', idx === activePt));
+    };
+    rayBtnsBox.appendChild(b);
+  });
+}
+
+function buildUI() {
+  renderRayBtns();
+  ptsBox.innerHTML = '';
+  pts.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'pt' + (i === activePt ? ' active-card' : '');
+    d.style.setProperty('--c', COL[i]);
+    d.innerHTML = `<h4>
+        <div class="pt-left">Точка ${i + 1} <input class="nm" data-k="name" maxlength="1" autocomplete="off" spellcheck="false" aria-label="Буква точки ${i + 1}"></div>
+        <button type="button" class="pick-btn ${i === activePt ? 'on' : ''}" data-pick="${i}">🎯 На грани</button>
+      </h4>
+      <div class="pos-tag" data-pos-tag></div>
+      <select data-k="m">
+        <option value="f">Произвольная точка на грани (Клик 3D)</option>
+        <option value="e">Точка на ребре</option>
+        <option value="v">Вершина</option>
+      </select>
+      <select data-k="v" class="vs">${fig.names.map((n, j) => `<option value="${j}">${n}</option>`).join('')}</select>
+      <div class="er"><select data-k="e">${fig.edges.map(([a, b], j) => `<option value="${j}">${fig.names[a]}–${fig.names[b]}</option>`).join('')}</select>
+      <div class="sl"><input type="range" data-k="t" min="0" max="1" step="0.01"><output></output></div>
+      <div class="fr">${FR.map(f => `<button type="button" data-t="${f[1]}">${f[0]}</button>`).join('')}</div></div>`;
+    const sync = () => {
+      d.querySelectorAll('[data-k]').forEach(el => { if (p[el.dataset.k] !== undefined) el.value = p[el.dataset.k]; });
+      d.querySelector('.vs').style.display = p.m === 'v' ? '' : 'none';
+      d.querySelector('.er').style.display = p.m === 'e' ? '' : 'none';
+      d.querySelector('output').textContent = (+p.t || 0).toFixed(2);
+      d.querySelector('[data-pos-tag]').textContent = describePointLocation(p);
+    };
+    d.addEventListener('input', e => {
+      const k = e.target.dataset.k; if (!k) return;
+      if (k === 'name') {
+        const v = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1);
+        if (v && v !== p.name && (pts.some((q, j) => j !== i && q.name === v) || fig.names.includes(v))) {
+          toast(`Буква ${v} уже занята`, 2000); e.target.value = p.name; return;
+        }
+        e.target.value = v; if (v) { p.name = v; renderRayBtns(); changed(); sync(); } return;
+      }
+      p[k] = k === 'm' ? e.target.value : +e.target.value;
+      p.pos = pointPos(p);
+      sync(); changed();
+    });
+    d.addEventListener('click', e => {
+      if (e.target.dataset.pick !== undefined) {
+        activePt = i;
+        renderRayBtns();
+        document.querySelectorAll('.pt').forEach((el, idx) => el.classList.toggle('active-card', idx === activePt));
+        document.querySelectorAll('.pick-btn').forEach((el, idx) => el.classList.toggle('on', idx === activePt));
+        return;
+      }
+      if (e.target.dataset.t) { p.m = 'e'; p.t = +e.target.dataset.t; p.pos = pointPos(p); sync(); changed(); }
+    });
+    d.addEventListener('focusin', e => { if (e.target.dataset.k === 'name') e.target.select(); });
+    d.addEventListener('focusout', e => { if (e.target.dataset.k === 'name') e.target.value = p.name; });
+    sync(); ptsBox.appendChild(d);
+  });
+}
+
+function updateMarkers() {
+  markers.forEach(m => { worldGroup.remove(m); m.geometry.dispose(); m.material.dispose(); }); markers = [];
+  pLabels.forEach(l => l.el.remove()); pLabels = [];
+  vLabels.forEach(vl => { vl.hiddenByPt = false; vl.el.style.display = ''; });
+
+  pts.forEach((p, i) => {
+    const P = pointPos(p);
+    const vi = vertexAt(P);
+    if (vi >= 0 && vLabels[vi]) {
+      vLabels[vi].hiddenByPt = true;
+      vLabels[vi].el.style.display = 'none';
+    }
+    const s = new THREE.Mesh(
+      new THREE.SphereGeometry(vi >= 0 ? .115 : .085, 20, 16),
+      new THREE.MeshBasicMaterial({ color: COL[i], depthTest: false })
+    );
+    s.position.copy(P); s.renderOrder = 10; worldGroup.add(s); markers.push(s);
+
+    const el = addLabel(sub(p.name), 'p');
+    el.style.color = COL[i];
+    const labelPos = vi >= 0 ? fig.verts[vi].clone().multiplyScalar(1.15) : outward(P, .28);
+    pLabels.push({ el, pos: labelPos });
+  });
+}
+
+function changed() {
+  presetSel.value = 'custom'; clearSection(); updateMarkers();
+  info.textContent = 'Нажмите «Построить сразу» или «Построить по шагам».';
+}
+
+function closestPointOnSegment(P, A, B) {
+  const AB = new THREE.Vector3().subVectors(B, A);
+  const lenSq = AB.lengthSq();
+  if (lenSq < 1e-12) return { pt: A.clone(), t: 0, dist: P.distanceTo(A) };
+  const t = Math.max(0, Math.min(1, new THREE.Vector3().subVectors(P, A).dot(AB) / lenSq));
+  const pt = A.clone().addScaledVector(AB, t);
+  return { pt, t, dist: P.distanceTo(pt) };
+}
+
+function computeRaycastPlacement(clientX, clientY) {
+  if (!figMesh) return null;
+  const rect = canvas.getBoundingClientRect();
+  mouseNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  worldGroup.updateMatrixWorld(true);
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObject(figMesh, false);
+  if (!hits.length) return null;
+  const hit = hits[0];
+  const localPt = hit.point.clone();
+  if (isMirrored) localPt.x = -localPt.x;
+  const fi = fig.triToFace[hit.faceIndex] || 0;
+  const fp = fig.facePlanes[fi];
+  if (fp) {
+    const d = fp.n.dot(new THREE.Vector3().subVectors(localPt, fp.v0));
+    localPt.addScaledVector(fp.n, -d);
+  }
+  const vi = fig.verts.findIndex(v => v.distanceTo(localPt) < 0.1);
+  if (vi >= 0) {
+    return { m: 'v', v: vi, e: 0, t: 0.5, pos: fig.verts[vi].clone(), faceIdx: fi };
+  }
+  let bestEdge = -1, bestT = 0.5, bestDist = 0.065, bestPt = null;
+  fig.edges.forEach(([a, b], ei) => {
+    const res = closestPointOnSegment(localPt, fig.verts[a], fig.verts[b]);
+    if (res.dist < bestDist) {
+      bestDist = res.dist; bestEdge = ei; bestT = res.t; bestPt = res.pt;
+    }
+  });
+  if (bestEdge >= 0) {
+    return { m: 'e', v: 0, e: bestEdge, t: Math.round(bestT * 100) / 100, pos: bestPt, faceIdx: fi };
+  }
+  return { m: 'f', v: 0, e: 0, t: 0.5, pos: localPt, faceIdx: fi };
+}
+
+let pDown = null;
+canvas.addEventListener('pointerdown', e => {
+  if (e.button !== undefined && e.button !== 0) return;
+  pDown = { x: e.clientX, y: e.clientY, t: performance.now() };
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (pDown && Math.hypot(e.clientX - pDown.x, e.clientY - pDown.y) > 5) {
+    hoverSphere.visible = false;
+    return;
+  }
+  const res = computeRaycastPlacement(e.clientX, e.clientY);
+  if (res) {
+    hoverSphere.position.copy(res.pos);
+    hoverSphere.material.color.set(COL[activePt]);
+    hoverSphere.visible = true;
+  } else {
+    hoverSphere.visible = false;
+  }
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (!pDown) return;
+  const dist = Math.hypot(e.clientX - pDown.x, e.clientY - pDown.y);
+  const dt = performance.now() - pDown.t;
+  pDown = null;
+  if (dist > 5 || dt > 450) return;
+
+  const res = computeRaycastPlacement(e.clientX, e.clientY);
+  if (!res) return;
+  const p = pts[activePt];
+  p.m = res.m;
+  p.v = res.v;
+  p.e = res.e;
+  p.t = res.t;
+  p.pos = res.pos;
+  p.faceIdx = res.faceIdx;
+  activePt = (activePt + 1) % pts.length;
+  buildUI();
+  changed();
+});
+
+function planeFrom3(P1, P2, P3) {
+  const n = new THREE.Vector3().subVectors(P2, P1).cross(new THREE.Vector3().subVectors(P3, P1));
+  if (n.length() < 1e-9) return null;
+  return { n, D: -n.dot(P1), P1 };
+}
+
+function intersectEdges(pl, verts, edges) {
+  const EPS = 1e-7, nl = pl.n.length(), res = [];
+  const add = p => { if (!res.some(q => q.distanceTo(p) < 1e-5)) res.push(p); };
+  edges.forEach(([i, j]) => {
+    const A = verts[i], B = verts[j];
+    const d1 = pl.n.dot(new THREE.Vector3().subVectors(A, pl.P1)) / nl;
+    const d2 = pl.n.dot(new THREE.Vector3().subVectors(B, pl.P1)) / nl;
+    if (Math.abs(d1) < EPS && Math.abs(d2) < EPS) { add(A.clone()); add(B.clone()); }
+    else if (Math.abs(d1) < EPS) add(A.clone());
+    else if (Math.abs(d2) < EPS) add(B.clone());
+    else if (d1 * d2 < -1e-7) add(A.clone().lerp(B, d1 / (d1 - d2)));
+  });
+  return res;
+}
+
+function sortByAngle(points, n) {
+  const c = points.reduce((s, p) => s.add(p), new THREE.Vector3()).divideScalar(points.length);
+  const u = new THREE.Vector3().subVectors(points[0], c).normalize();
+  const v = new THREE.Vector3().crossVectors(n, u).normalize();
+  const ang = p => { const r = new THREE.Vector3().subVectors(p, c); return Math.atan2(r.dot(v), r.dot(u)); };
+  return { c, sorted: points.slice().sort((a, b) => ang(a) - ang(b)) };
+}
+
+const btnNext = document.getElementById('next'), btnAuto = document.getElementById('auto'), btnPrev = document.getElementById('prev');
+const HOME = new THREE.Vector3(4.2, 3.4, 5.2);
+const RESERVE = ['P','Q','R','E','F','L','T','X','Y','Z','H','G'];
+let secColor = '#ff9800', camAnim = null;
+const lineCol = () => new THREE.Color(secColor).lerp(new THREE.Color(0xffffff), .45);
+
+function outward(P, d) {
+  const v = P.clone(); if (v.length() < 1e-6) v.set(0, 1, 0);
+  return P.clone().add(v.normalize().multiplyScalar(d));
+}
+
+function syncBtns() {
+  const done = !!(step && step.done);
+  btnNext.disabled = btnAuto.disabled = done;
+  btnPrev.disabled = !step || (step.i === 0 && !step.done);
+  btnAuto.textContent = auto ? '❚❚ Пауза' : '▶ Авто';
+}
+
+function clearSection() {
+  clearTimeout(autoTimer); auto = false; anim = null; step = null;
+  if (secGroup) { disposeGroup(secGroup); secGroup = null; }
+  secLabels.forEach(l => l.el.remove()); secLabels = [];
+  syncBtns();
+}
+
+function addSecPoint(p, name, isNew, aux) {
+  if (aux) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(.055, 14, 10), new THREE.MeshBasicMaterial({ color: 0x808080, depthTest: false }));
+    m.position.copy(p); m.renderOrder = 9; m.userData.aux = true; secGroup.add(m);
+    if (name) {
+      const el = addLabel(sub(name), 'aux');
+      secLabels.push({ el, pos: outward(p, .26), aux: true });
+    }
+    return;
+  }
+  const core = new THREE.Mesh(new THREE.SphereGeometry(.06, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff176, depthTest: false }));
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(.14, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xffc400, transparent: true, opacity: .28, depthTest: false, depthWrite: false }));
+  [core, halo].forEach(o => { o.position.copy(p); o.renderOrder = 9; secGroup.add(o); });
+  if (isNew && name) secLabels.push({ el: addLabel(sub(name), 'q'), pos: outward(p, .28) });
+}
+
+function nameSection(sorted) {
+  const used = new Set([...pts.map(p => p.name), ...fig.names]);
+  const free = RESERVE.filter(l => !used.has(l));
+  const src = pts.map(pointPos);
+  return sorted.map(p => {
+    let j = src.findIndex(q => q.distanceTo(p) < 0.1);
+    if (j >= 0) return { name: pts[j].name, isNew: false };
+    j = fig.verts.findIndex(q => q.distanceTo(p) < 1e-5);
+    if (j >= 0) return { name: fig.names[j], isNew: false };
+    return { name: free.shift() || '?', isNew: true };
+  });
+}
+
+function prepareSection() {
+  clearSection();
+  const P = pts.map(pointPos);
+  if (P.some((a, i) => P.some((b, j) => j > i && a.distanceTo(b) < 0.001))) {
+    info.textContent = 'Ошибка: выбраны совпадающие точки. Секущая плоскость не определена.'; return null;
+  }
+  const pl = planeFrom3(P[0], P[1], P[2]);
+  if (!pl) { info.innerHTML = 'Плоскость не определена.<small>Точки лежат на одной прямой.</small>'; return null; }
+  const found = intersectEdges(pl, fig.verts, fig.edges);
+  if (found.length < 3) { info.innerHTML = 'Сечения нет.<small>Плоскость не пересекает многогранник по площади.</small>'; return null; }
+  const { c, sorted } = sortByAngle(found, pl.n);
+  secGroup = new THREE.Group(); worldGroup.add(secGroup);
+  return { pl, c, sorted, labs: nameSection(sorted) };
+}
+
+function finishSection({ pl, c, sorted, labs }) {
+  const pos = [c.x, c.y, c.z], idx = [];
+  sorted.forEach((p, i) => { pos.push(p.x, p.y, p.z); idx.push(0, i + 1, (i + 1) % sorted.length + 1); });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(sorted), new THREE.LineBasicMaterial({ color: lineCol() }));
+  outline.userData.role = 'line'; secGroup.add(outline);
+  const fill = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+    color: secColor, transparent: true, opacity: .6, side: THREE.DoubleSide, depthWrite: false }));
+  fill.userData.role = 'fill'; secGroup.add(fill);
+  const r = x => (Math.round(x * 100) / 100).toString(), n = sorted.length;
+  let per = 0; sorted.forEach((p, i) => per += p.distanceTo(sorted[(i + 1) % n]));
+  info.innerHTML = `Искомое сечение — ${ruN[n] || n + '-угольник'} ${labs.map(l => sub(l.name)).join('')}.
+    <small>Периметр P ≈ ${per.toFixed(2)} (при ребре a = ${fig.a})</small>
+    <small>Уравнение плоскости: ${r(pl.n.x)}x + ${r(pl.n.y)}y + ${r(pl.n.z)}z + ${r(pl.D)} = 0</small>`;
+}
+
+function applyColor() {
+  if (!secGroup) return;
+  secGroup.traverse(o => {
+    if (o.userData.role === 'fill') o.material.color.set(secColor);
+    else if (o.userData.role === 'line') o.material.color.copy(lineCol());
+  });
+}
+
+function buildSection() {
+  const s = prepareSection(); if (!s) return;
+  const plan = buildPlan(s);
+  step = { s, plan, i: plan.length, busy: false, done: true, shown: [] };
+  plan.forEach(st => {
+    st.segs.forEach(sg => secGroup.add(makeLine(sg, true)));
+    st.pts.forEach(revealPt);
+  });
+  s.sorted.forEach((p, i) => revealPt({ p, name: s.labs[i].name, isNew: s.labs[i].isNew }));
+  finishSection(s);
+  syncBtns();
+}
+
+function buildPlan(s) {
+  const EPS = 1e-4, d3 = (a, b) => new THREE.Vector3().subVectors(a, b);
+  const F = fig.faces.map(f => ({ f, v0: fig.verts[f[0]],
+    n: d3(fig.verts[f[1]], fig.verts[f[0]]).cross(d3(fig.verts[f[2]], fig.verts[f[0]])).normalize(), name: f.map(i => fig.names[i]).join('') }));
+  const inF = (g, p) => Math.abs(g.n.dot(d3(p, g.v0))) < EPS;
+  const labOf = p => { const i = s.sorted.findIndex(q => q.distanceTo(p) < EPS); return i < 0 ? null : s.labs[i]; };
+  const known = pts.map(p => ({ p: pointPos(p), name: srcName(p) }));
+  const find = p => known.find(k => k.p.distanceTo(p) < EPS);
+  const addKnown = (p, lab) => { if (lab && !find(p)) known.push({ p, name: lab.name }); };
+
+  const usedLetters = new Set([...pts.map(p => p.name), ...fig.names, ...s.labs.map(l => l.name)]);
+  const auxReserve = ['E','F','T','L','P','Q','R','X','Y','Z','H','G'].filter(l => !usedLetters.has(l));
+  let auxCounter = 1;
+  const nextAuxName = () => auxReserve.shift() || ('T' + (auxCounter++));
+
+  const plan = [], chords = [], chordFaces = new Set(), done = new Set(), auxDone = new Set(), parTried = new Set();
+  const nameE = (i, j) => sub(fig.names[i] + fig.names[j]);
+  const commonF = (A, B) => F.filter(g => inF(g, A) && inF(g, B));
+
+  function chordIn(g, A, dir) {
+    const hits = [];
+    g.f.forEach((i, k) => {
+      const j = g.f[(k + 1) % g.f.length], E0 = fig.verts[i], e = d3(fig.verts[j], E0), c = new THREE.Vector3().crossVectors(dir, e), cl = c.lengthSq();
+      if (cl < 1e-12) return;
+      const u = d3(E0, A).cross(dir).dot(c) / cl;
+      hits.push({ u, i, j, p: E0.clone().addScaledVector(e, u) });
+    });
+    const ends = [];
+    hits.filter(h => h.u > -EPS && h.u < 1 + EPS).forEach(h => { if (!ends.some(e => e.p.distanceTo(h.p) < EPS)) ends.push(h); });
+    ends.sort((x, y) => d3(x.p, A).dot(dir) - d3(y.p, A).dot(dir));
+    return { hits, ends };
+  }
+
+  const endText = (h, ln) => {
+    const lab = labOf(h.p);
+    const ptName = sub(lab ? lab.name : '?');
+    const vi = fig.verts.findIndex(v => v.distanceTo(h.p) < EPS);
+    return vi >= 0
+      ? `Прямая ${ln} проходит через вершину ${ptName}.`
+      : `Прямая ${ln} пересекает ребро ${nameE(h.i, h.j)} в точке ${ptName}.`;
+  };
+
+  function makeChord(g, A, dir, ln, head, origin) {
+    const { hits, ends } = chordIn(g, A, dir);
+    if (ends.length < 2) return null;
+    const chord = [ends[0].p, ends[ends.length - 1].p];
+    if (chord[0].distanceTo(origin) > chord[1].distanceTo(origin)) chord.reverse();
+    const fresh = ends.filter(h => !find(h.p));
+    ends.forEach(h => addKnown(h.p, labOf(h.p)));
+    chordFaces.add(g);
+    const nm = chord.map(q => (labOf(q) || { name: '?' }).name);
+    const chordLabel = sub(nm[0]) + sub(nm[1]);
+    chords.push({ g, dir: d3(chord[1], chord[0]).normalize(), label: chordLabel });
+    const st = {
+      segs: [{ A: chord[0], B: chord[1] }],
+      note: '',
+      pts: ends.map(h => ({ p: h.p, lab: labOf(h.p) })).filter(x => x.lab).map(x => ({ p: x.p, name: x.lab.name, isNew: x.lab.isNew })),
+      html: head + (fresh.length ? ' ' + fresh.map(h => endText(h, ln)).join(' ') : '')
+    };
+    return { st, hits, chord, ln };
+  }
+
+  function describe(KA, KB, g) {
+    const ln = sub(KA.name) + sub(KB.name);
+    return { ln, head: `Проведена прямая ${ln} в грани ${sub(g.name)}.` };
+  }
+
+  function findExt(g, hits, chord, fixedEnd) {
+    const hasParFace = F.some(x => x !== g && Math.abs(x.n.dot(g.n)) > 1 - 1e-9);
+    for (const h of hits.filter(h => h.u < -EPS || h.u > 1 + EPS)) {
+      const g2 = F.find(x => x !== g && x.f.includes(h.i) && x.f.includes(h.j));
+      const C = g2 && !chordFaces.has(g2) && known.find(k => inF(g2, k.p) && !inF(g, k.p));
+      const far = h.p.length() > 3.8;
+      if (!C || find(h.p) || (far && hasParFace)) continue;
+      const near = h.p.distanceTo(chord[0]) < h.p.distanceTo(chord[1]) ? 0 : 1;
+      if (fixedEnd >= 0 && near !== fixedEnd) continue;
+      const auxName = nextAuxName();
+      const T = { p: h.p.clone(), name: auxName, aux: true, used: false };
+      known.push(T);
+      const V = [fig.verts[h.i], fig.verts[h.j]].sort((a, b) => a.distanceTo(T.p) - b.distanceTo(T.p))[0];
+      return { T, near, V, h, g2, C };
+    }
+    return null;
+  }
+
+  function tryParallel() {
+    for (const c of chords) for (const g2 of F) {
+      if (g2 === c.g || chordFaces.has(g2) || parTried.has(c.label + g2.name)) continue;
+      const Q = known.find(k => !k.aux && inF(g2, k.p)) || known.find(k => inF(g2, k.p)); if (!Q) continue;
+      const qs = sub(Q.name);
+      let head = null;
+      if (Math.abs(g2.n.dot(c.g.n)) > 1 - 1e-9)
+        head = `Грани ${sub(c.g.name)} и ${sub(g2.name)} параллельны. Через точку ${qs} проведена прямая, параллельная ${c.label}.`;
+      else {
+        const e = c.g.f.map((i, k) => [i, c.g.f[(k + 1) % c.g.f.length]]).find(([i, j]) =>
+          g2.f.includes(i) && g2.f.includes(j) && d3(fig.verts[j], fig.verts[i]).cross(c.dir).length() < 1e-9);
+        if (e) head = `Прямая ${c.label} параллельна ребру ${nameE(e[0], e[1])}. Через точку ${qs} в грани ${sub(g2.name)} проведена прямая, параллельная ${c.label}.`;
+      }
+      if (!head) continue;
+      parTried.add(c.label + g2.name);
+      const r = makeChord(g2, Q.p, c.dir, `(через ${qs} ∥ ${c.label})`, head, Q.p);
+      if (r) { Q.used = true; return r.st; }
+    }
+    return null;
+  }
+
+  function tryAuxPlane() {
+    for (let a = 0; a < known.length; a++) for (let b = a + 1; b < known.length; b++) {
+      const key = a + '-' + b, KA = known[a], KB = known[b];
+      if (auxDone.has(key) || commonF(KA.p, KB.p).length) continue;
+      const dir = d3(KB.p, KA.p);
+      for (const g of F) {
+        if (chordFaces.has(g)) continue;
+        const C = known.find(k => k !== KA && k !== KB && inF(g, k.p)), den = g.n.dot(dir);
+        if (!C || Math.abs(den) < 1e-9) continue;
+        const T = KA.p.clone().addScaledVector(dir, g.n.dot(d3(g.v0, KA.p)) / den);
+        if (find(T)) continue;
+        const name = nextAuxName();
+        const ln = sub(KA.name) + sub(KB.name);
+        known.push({ p: T, name, aux: true, used: true }); auxDone.add(key);
+        const startPt = T.distanceTo(KA.p) > T.distanceTo(KB.p) ? KA.p : KB.p;
+        plan.push({
+          segs: [{ A: startPt, B: T, dashed: true, reveal: { p: T, name, isNew: true, aux: true } }],
+          pts: [{ p: T, name, isNew: true, aux: true }],
+          note: '',
+          html: `Проведена прямая ${ln}. Прямая ${ln} пересекает плоскость грани ${sub(g.name)} в точке ${sub(name)}.`
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  for (let guard = 0; guard < 30 && !s.sorted.every(q => find(q)); guard++) {
+    let pr = null;
+    for (let a = 0; a < known.length && !pr; a++) for (let b = a + 1; b < known.length && !pr; b++) {
+      const key = a + '-' + b; if (done.has(key)) continue;
+      const cf = commonF(known[a].p, known[b].p); if (!cf.length) continue;
+      const g = cf.find(g => !chordFaces.has(g));
+      if (g) pr = { a, b, g, key }; else done.add(key);
+    }
+    if (pr) {
+      done.add(pr.key);
+      const KA = known[pr.a], KB = known[pr.b], { ln, head } = describe(KA, KB, pr.g);
+      const r = makeChord(pr.g, KA.p, d3(KB.p, KA.p), ln, head, KA.p);
+      if (!r) continue;
+      KA.used = KB.used = true;
+      const c = r.chord, auxK = [KA, KB].find(k => k.aux), nearTo = P => P.distanceTo(c[0]) < P.distanceTo(c[1]) ? 0 : 1;
+      let start = auxK ? nearTo(auxK.p) : 0;
+      const ext = findExt(pr.g, r.hits, c, auxK ? 1 - start : -1);
+      if (ext && !auxK) start = 1 - ext.near;
+      const segs = [];
+      if (auxK) segs.push({ A: auxK.p, B: c[start], dashed: true });
+      segs.push({ A: c[start], B: c[1 - start] });
+      if (ext) {
+        const { T, V, h } = ext, pt = { p: T.p, name: T.name, isNew: true, aux: true };
+        segs.push({ A: c[1 - start], B: T.p, dashed: true, of: T, reveal: pt });
+        segs.push({ A: T.p, B: V, dashed: true, of: T });
+        r.st.pts.push(pt); r.st.aux = T;
+        r.st.note = ` Прямая ${ln} пересекает продолжение ребра ${nameE(h.i, h.j)} в точке ${sub(T.name)}.`;
+      }
+      r.st.segs = segs; plan.push(r.st); continue;
+    }
+    const st = tryParallel(); if (st) { plan.push(st); continue; }
+    if (tryAuxPlane()) continue;
+    break;
+  }
+
+  const n = s.sorted.length;
+  s.sorted.forEach((p, i) => {
+    const q = s.sorted[(i + 1) % n], l1 = s.labs[i], l2 = s.labs[(i + 1) % n], cf = commonF(p, q);
+    if (cf.some(g => chordFaces.has(g))) return;
+    if (cf[0]) chordFaces.add(cf[0]);
+    const ln = sub(l1.name) + sub(l2.name);
+    plan.push({
+      segs: [{ A: p, B: q }],
+      note: '',
+      pts: [{ p, name: l1.name, isNew: l1.isNew }, { p: q, name: l2.name, isNew: l2.isNew }],
+      html: `Проведена прямая ${ln}${cf[0] ? ' в грани ' + sub(cf[0].name) : ''}.`
+    });
+  });
+
+  plan.forEach(st => {
+    if (st.aux && !st.aux.used) { st.segs = st.segs.filter(x => x.of !== st.aux); st.pts = st.pts.filter(x => !x.aux); st.note = ''; }
+    st.html += st.note;
+  });
+  return plan;
+}
+
+const step0Html = () => `Даны точки: ${pts.map(p => sub(srcName(p))).join(', ')}.<small>Нажмите «Следующий шаг» или «Авто».</small>`;
+
+function startSteps() {
+  const s = prepareSection(); if (!s) return;
+  step = { s, plan: buildPlan(s), i: 0, busy: false, done: false, shown: [] };
+  info.innerHTML = step0Html(); syncBtns();
+}
+
+function makeLine(sg, full) {
+  const E = full ? sg.B : sg.A, geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute([sg.A.x, sg.A.y, sg.A.z, E.x, E.y, E.z], 3));
+  const mat = sg.dashed
+    ? new THREE.LineDashedMaterial({ color: 0x9e9ea8, dashSize: .08, gapSize: .06, transparent: true, opacity: .85 })
+    : new THREE.LineBasicMaterial({ color: lineCol() });
+  const line = new THREE.Line(geo, mat); line.frustumCulled = false; line.userData.role = sg.dashed ? 'dashed' : 'line';
+  if (sg.dashed) { line.userData.dashed = true; line.computeLineDistances(); }
+  return line;
+}
+
+function revealPt(q) {
+  if (step.shown.some(x => x.distanceTo(q.p) < 1e-5)) return;
+  step.shown.push(q.p); addSecPoint(q.p, q.name, q.isNew, q.aux);
+}
+
+function goToStep(n) {
+  clearTimeout(autoTimer); auto = false; anim = null; step.busy = false; step.done = false;
+  [...secGroup.children].forEach(o => { secGroup.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  secLabels.forEach(l => l.el.remove()); secLabels = []; step.shown = [];
+  for (let j = 0; j < n; j++) { const st = step.plan[j]; st.segs.forEach(sg => secGroup.add(makeLine(sg, true))); st.pts.forEach(revealPt); }
+  secGroup.children.forEach(o => { o.visible = true; });
+  step.i = n;
+  info.innerHTML = n === 0 ? step0Html() : `Шаг ${n}. ${step.plan[n - 1].html}`;
+  syncBtns();
+}
+
+function nextStep() {
+  if (!step || step.busy || step.done) return;
+  const st = step.plan[step.i];
+  if (!st) {
+    step.s.sorted.forEach((p, i) => revealPt({ p, name: step.s.labs[i].name, isNew: step.s.labs[i].isNew }));
+    finishSection(step.s); step.done = true; auto = false; syncBtns(); return;
+  }
+  step.i++; step.busy = true;
+  const items = st.segs.map(sg => { const line = makeLine(sg, false); secGroup.add(line); return { line, A: sg.A, B: sg.B, dashed: !!sg.dashed, reveal: sg.reveal }; });
+  let tip = null;
+  if (items.length) {
+    tip = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false }));
+    tip.position.copy(items[0].A); tip.renderOrder = 11; secGroup.add(tip);
+  }
+  info.innerHTML = `Шаг ${step.i}. ${st.html}`;
+  anim = { items, tip, t0: performance.now(), dur: items.length ? 850 * items.length : 450, end() {
+    st.pts.forEach(revealPt);
+    if (tip) secGroup.remove(tip);
+    step.busy = false;
+    if (auto) autoTimer = setTimeout(nextStep, 950);
+  } };
+  syncBtns();
+}
+
+function updateAnim(now) {
+  if (!anim) return;
+  const T = Math.min(1, (now - anim.t0) / anim.dur), n = anim.items.length, Xs = [];
+  anim.items.forEach((it, k) => {
+    const r = Math.min(1, Math.max(0, T * n - k)), e = r * r * (3 - 2 * r);
+    const X = it.A.clone().lerp(it.B, e), at = it.line.geometry.attributes.position;
+    at.setXYZ(1, X.x, X.y, X.z); at.needsUpdate = true; Xs.push(X);
+    if (r >= 1 && !it.done) { it.done = true; if (it.reveal) revealPt(it.reveal); }
+    if (it.dashed) it.line.computeLineDistances();
+  });
+  if (anim.tip && n) anim.tip.position.copy(Xs[Math.min(n - 1, Math.floor(T * n))]);
+  if (T >= 1) { const a = anim; anim = null; a.end(); }
+}
+
+function resetCamera() { camAnim = { t0: performance.now(), p: camera.position.clone(), t: controls.target.clone() }; }
+function updateCam(now) {
+  if (!camAnim) return;
+  const t = Math.min(1, (now - camAnim.t0) / 700), e = t * t * (3 - 2 * t);
+  camera.position.lerpVectors(camAnim.p, HOME, e);
+  controls.target.lerpVectors(camAnim.t, new THREE.Vector3(0, 0, 0), e);
+  if (t >= 1) camAnim = null;
+}
+controls.addEventListener('start', () => { camAnim = null; });
+
+document.querySelectorAll('[data-start]').forEach(btn => {
+  btn.onclick = () => {
+    const fType = btn.dataset.start;
+    startMenu.style.display = 'none';
+    setFigure(fType);
+  };
+});
+
+document.getElementById('openMenuBtn').onclick = e => {
+  e.stopPropagation();
+  startMenu.style.display = 'flex';
+};
+
+document.getElementById('mirrorBtn').onclick = e => {
+  isMirrored = !isMirrored;
+  worldGroup.scale.x = isMirrored ? -1 : 1;
+  worldGroup.updateMatrixWorld(true);
+  e.currentTarget.classList.toggle('on', isMirrored);
+  toast(isMirrored ? 'Фигура зеркально отражена' : 'Исходная ориентация фигуры', 1800);
+};
+
+document.getElementById('build').onclick = buildSection;
+document.getElementById('steps').onclick = startSteps;
+btnPrev.onclick = () => {
+  if (!step || (step.i === 0 && !step.done)) return;
+  goToStep(step.done ? step.i : step.i - 1);
+};
+document.getElementById('cam').onclick = e => { e.stopPropagation(); resetCamera(); };
+document.getElementById('color').onchange = e => { secColor = e.target.value; applyColor(); };
+btnNext.onclick = () => {
+  clearTimeout(autoTimer); auto = false;
+  if (!step) startSteps(); else nextStep();
+  syncBtns();
+};
+btnAuto.onclick = () => {
+  auto = !auto; clearTimeout(autoTimer);
+  if (auto) { if (!step) startSteps(); if (step && !step.busy) nextStep(); else if (!step) auto = false; }
+  syncBtns();
+};
+document.getElementById('reset').onclick = () => { clearSection(); info.textContent = 'Сечение сброшено.'; };
+
+let streak = 0, lastClick = 0;
+document.getElementById('head').onclick = () => {
+  const now = performance.now(); streak = now - lastClick < 450 ? streak + 1 : 1; lastClick = now;
+  if (streak >= 5) { streak = 0; toast('Автор проекта: Илья (@IL33MA)', 3000); return; }
+  panel.classList.toggle('closed');
+};
+
+let toastT = 0;
+function toast(text, ms) {
+  const el = document.getElementById('toast'); el.textContent = text; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), ms || 3000);
+}
+
+const PRESETS = {
+  hex:   { fig: 'cube',  d: [{ m: 'e', e: 'A–B', t: .5 }, { m: 'e', e: 'C–C1', t: .5 }, { m: 'e', e: 'D1–A1', t: .5 }] },
+  trap:  { fig: 'cube',  d: [{ m: 'e', e: 'A–B', t: .5 }, { m: 'e', e: 'D–A', t: .5 }, { m: 'v', v: 'B1' }] },
+  tri:   { fig: 'cube',  d: [{ m: 'v', v: 'B' }, { m: 'v', v: 'D' }, { m: 'v', v: 'A1' }] },
+  tetra: { fig: 'tetra', d: [{ m: 'e', e: 'A–B', t: .5 }, { m: 'e', e: 'B-C', t: 1/3 }, { m: 'e', e: 'C–D', t: .5 }] },
+  pyr:   { fig: 'pyr',   d: [{ m: 'e', e: 'A–S', t: .4 }, { m: 'e', e: 'B–S', t: .6 }, { m: 'e', e: 'C–D', t: .5 }] },
+  prism: { fig: 'prism', d: [{ m: 'e', e: 'A–B', t: .5 }, { m: 'e', e: 'B–B1', t: .5 }, { m: 'e', e: 'C–C1', t: .7 }] }
+};
+
+function applyPreset(key) {
+  const P = PRESETS[key]; if (!P) return;
+  setFigure(P.fig);
+  pts.forEach((p, i) => {
+    const d = P.d[i]; p.name = LAB[i]; p.m = d.m; p.t = d.t != null ? d.t : .5;
+    if (d.m === 'v') p.v = fig.names.indexOf(d.v);
+    else {
+      const targetStr = d.e.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      p.e = Math.max(0, fig.edges.findIndex(([a, b]) => {
+        const s1 = fig.names[a] + fig.names[b], s2 = fig.names[b] + fig.names[a];
+        return s1 === targetStr || s2 === targetStr;
+      }));
+    }
+    p.pos = pointPos(p);
+  });
+  buildUI(); updateMarkers(); presetSel.value = key; buildSection();
+}
+presetSel.onchange = () => applyPreset(presetSel.value);
+
+document.getElementById('snap').onclick = e => {
+  e.stopPropagation();
+  labelsBox.style.visibility = 'hidden';
+  requestAnimationFrame(() => {
+    renderer.render(scene, camera);
+    const out = document.createElement('canvas'), k = canvas.width / innerWidth;
+    out.width = canvas.width; out.height = canvas.height;
+    const cx = out.getContext('2d'); cx.drawImage(canvas, 0, 0);
+    cx.font = `bold ${Math.round(16 * k)}px system-ui,sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.lineWidth = 4 * k; cx.strokeStyle = '#000';
+    lastVis.forEach(l => {
+      const t = l.el.textContent; cx.strokeText(t, l.x * k, l.y * k);
+      cx.fillStyle = getComputedStyle(l.el).color; cx.fillText(t, l.x * k, l.y * k);
+    });
+    const a = document.createElement('a');
+    a.href = out.toDataURL('image/png'); a.download = 'stereometry_section.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    labelsBox.style.visibility = '';
+  });
+};
+
+document.getElementById('figs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setFigure(b.dataset.f);
+};
+
+const tmp = new THREE.Vector3();
+let lastVis = [];
+function placeLabels() {
+  const vis = [];
+  [...vLabels, ...pLabels, ...secLabels].forEach(l => {
+    if (l.hiddenByPt) { l.el.style.display = 'none'; return; }
+    tmp.copy(l.pos);
+    if (isMirrored) tmp.x = -tmp.x;
+    tmp.project(camera);
+    l.el.style.display = tmp.z < 1 ? '' : 'none';
+    if (tmp.z < 1) { l.x = (tmp.x * .5 + .5) * innerWidth; l.y = (-tmp.y * .5 + .5) * innerHeight; vis.push(l); }
+  });
+  for (let it = 0; it < 4; it++) for (let i = 0; i < vis.length; i++) for (let j = i + 1; j < vis.length; j++) {
+    const a = vis[i], b = vis[j]; let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+    if (d >= 28) continue;
+    if (d < 1) { dx = 1; dy = 1; d = 1.4142; }
+    const k = (28 - d) / (2 * d);
+    a.x -= dx * k; a.y -= dy * k; b.x += dx * k; b.y += dy * k;
+  }
+  vis.forEach(l => { l.el.style.left = l.x + 'px'; l.el.style.top = l.y + 'px'; });
+  lastVis = vis;
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  updateAnim(performance.now()); updateCam(performance.now());
+  controls.update(); renderer.render(scene, camera);
+  placeLabels();
+}
+console.log('%cРазработано: @IL33MA | 3D Stereometry Project', 'background: #00d2ff; color: #000; font-weight: bold; padding: 4px 8px; border-radius: 4px;');
+setFigure('cube'); resize(); loop();
+</script>
+</body>
+</html>
